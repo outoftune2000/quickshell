@@ -72,7 +72,7 @@ Singleton {
             property bool dockMusicPlayer: true
 
             // Wallhaven params
-            property string wallhavenApiKey: ""
+            property string wallhavenApiKey: "ugj2klyucx6IylJNxGQYu6sHyztDaav2"
             property string wallhavenCategories: "111"
             property string wallhavenPurity: "100"
             property string wallhavenSorting: "toplist"

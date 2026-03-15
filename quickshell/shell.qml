@@ -192,6 +192,15 @@ ShellRoot {
             }
             focus: true
         }
+        Loader {
+            active: false
+            id: chatLoader
+            anchors.centerIn: parent
+            sourceComponent: OllamaChat{
+                id: ollamaChat
+            }
+            focus: true
+        }
 
         property bool altHeld: false
 
@@ -231,6 +240,9 @@ ShellRoot {
             }
             Region{
                 item: wallpaper.visible ? wallpaper : null
+            }
+            Region{
+                item: chatLoader.active ? chatLoader : null
             }
         }
     }
@@ -299,6 +311,18 @@ ShellRoot {
                 controlCenterLoader.item.opened = true
             } else {
                 controlCenterLoader.item.opened = !controlCenterLoader.item.opened
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "ollamaChat"
+        function changeVisible(): void {
+            if (!chatLoader.active) {
+                chatLoader.active = true
+                chatLoader.item.visible = true
+            } else {
+                chatLoader.item.visible = !chatLoader.item.visible
             }
         }
     }
