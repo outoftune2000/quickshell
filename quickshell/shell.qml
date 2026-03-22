@@ -18,6 +18,7 @@ import qs.modules.launcher
 import qs.modules.wallpaper
 import qs.modules.manga
 import qs.modules.novel
+import qs.modules.anime
 
 ShellRoot {
     id: root
@@ -227,6 +228,18 @@ ShellRoot {
                 id: novelReaderReader
             }
         }
+        Loader {
+            active: false
+            id: animeLoader
+            anchors {
+                left: parent.left
+                top: parent.top
+                bottom: parent.bottom
+            }
+            sourceComponent: AnimePanel{
+                id: animePlayer
+            }
+        }
 
         property bool altHeld: false
 
@@ -275,6 +288,9 @@ ShellRoot {
             }
             Region{
                 item: novelLoader.item.visible ? novelLoader.item : null
+            }
+            Region{
+                item: animeLoader.item.visible ? animeLoader.item : null
             }
         }
     }
@@ -339,6 +355,21 @@ ShellRoot {
         }
     }
 
+    Timer {
+        id: closeAnimeTimer
+        interval: 600
+        onTriggered: mangaLoader.active = false
+    }
+
+    Connections {
+        target: chatLoader.item
+        function onVisibleChanged() {
+            if (animeLoader.item && !animeLoader.item.visible) {
+                closeAnimeTimer.start()
+            }
+        }
+    }
+
     IpcHandler {
         target: "mediaPanel"
 
@@ -374,6 +405,19 @@ ShellRoot {
                 novelLoader.item.visible = true
             } else {
                 novelLoader.item.visible = !novelLoader.item.visible
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "animePlayer"
+
+        function toggle(): void {
+            if (!animeLoader.active) {
+                animeLoader.active = true
+                animeLoader.item.visible = true
+            } else {
+                animeLoader.item.visible = !animeLoader.item.visible
             }
         }
     }

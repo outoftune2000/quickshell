@@ -6,9 +6,8 @@ Implemented:
   - latest()   → /sort/latest-novel[/page]
   - info()     → /novel/<slug>
   - chapter()  → /novel/<slug>/<chapter-slug>
+  - search()   → POST /search
 
-Stubs:
-  - search()   (not yet implemented)
 """
 
 import re
@@ -268,28 +267,28 @@ class FreeWebNovelProvider(NovelProvider):
             "nextId":     next_raw if _is_chapter(next_raw) else "",
         }
 
-    # ── Search stub ───────────────────────────────────────────────────────
+    # ── Search ────────────────────────────────────────────────────────────
 
-        def _search(self, query, genre, status, page) -> dict:
-            from .utils import BASE_HEADERS, _session, _USE_CFFI
+    def _search(self, query, genre, status, page) -> dict:
+        from .utils import BASE_HEADERS, _session, _USE_CFFI
 
-            headers = {
-                **BASE_HEADERS,
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Referer":      BASE + "/",
-                "Origin":       BASE,
-            }
-            body = f"searchkey={quote(query)}"
+        headers = {
+            **BASE_HEADERS,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Referer":      BASE + "/",
+            "Origin":       BASE,
+        }
+        body = f"searchkey={quote(query)}"
 
-            if _USE_CFFI:
-                r = _session.post(f"{BASE}/search", headers=headers, content=body, timeout=30)
-            else:
-                r = _session.post(f"{BASE}/search", headers=headers, data=body, timeout=30)
-            r.raise_for_status()
+        if _USE_CFFI:
+            r = _session.post(f"{BASE}/search", headers=headers, data=body, timeout=30)
+        else:
+            r = _session.post(f"{BASE}/search", headers=headers, data=body, timeout=30)
+        r.raise_for_status()
 
-            results = self._parse_li_rows(r.text)
-            return {
-                "results":  results,
-                "hasMore":  False,   # FWN search is single-page
-                "nextPage": 1,
-            }
+        results = self._parse_li_rows(r.text)
+        return {
+            "results":  results,
+            "hasMore":  False,   # FWN search is single-page
+            "nextPage": 1,
+        }
