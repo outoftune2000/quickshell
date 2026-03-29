@@ -20,10 +20,93 @@ Item {
     readonly property var _reversedChapters:
         Novel.currentNovel ? Novel.currentNovel.chapters.slice().reverse() : []
 
+    // ---------- helper functions ----------
+    function continueReading() {
+        if (!Novel.currentNovel) return
+
+        var entry = Novel.getLibraryEntry(Novel.currentNovel.id)
+        var lastChapterId = entry ? entry.lastReadChapterId : null
+        var targetChapter = null
+
+        // try to find chapter by last read ID
+        if (lastChapterId) {
+            for (var i = 0; i < Novel.currentNovel.chapters.length; i++) {
+                if (Novel.currentNovel.chapters[i].id === lastChapterId) {
+                    targetChapter = Novel.currentNovel.chapters[i]
+                    break
+                }
+            }
+        }
+
+        // fallback to first chapter
+        if (!targetChapter && Novel.currentNovel.chapters.length > 0) {
+            targetChapter = Novel.currentNovel.chapters[0]
+        }
+
+        if (targetChapter) {
+            Novel.fetchChapter(targetChapter.id)
+            detailView.chapterSelected(targetChapter.id)
+            if (detailView._inLibrary) {
+                Novel.updateLastRead(Novel.currentNovel.id, targetChapter.id, targetChapter.chapter)
+            }
+        }
+    }
+
+    function readNext() {
+        if (!Novel.currentNovel) return
+
+        var entry = Novel.getLibraryEntry(Novel.currentNovel.id)
+        var lastChapterId = entry ? entry.lastReadChapterId : null
+        var targetChapter = null
+
+        // try to find chapter by last read ID
+        if (lastChapterId) {
+            for (var i = 0; i < Novel.currentNovel.chapters.length - 1; i++) {
+                if (Novel.currentNovel.chapters[i].id === lastChapterId) {
+                    targetChapter = Novel.currentNovel.chapters[i + 1]
+                    break
+                }
+            }
+        }
+
+        // fallback to first chapter
+        if (!targetChapter && Novel.currentNovel.chapters.length > 0) {
+            targetChapter = Novel.currentNovel.chapters[0]
+        }
+
+        if (targetChapter) {
+            Novel.fetchChapter(targetChapter.id)
+            detailView.chapterSelected(targetChapter.id)
+            if (detailView._inLibrary) {
+                Novel.updateLastRead(Novel.currentNovel.id, targetChapter.id, targetChapter.chapter)
+            }
+        }
+    }
+
+    function searchAndGoToChapter() {
+        if (!Novel.currentNovel) return
+
+        var searchNum = parseInt(searchField.text)
+        if (isNaN(searchNum)) return
+
+        var chapters = Novel.currentNovel.chapters
+        for (var i = 0; i < chapters.length; i++) {
+            if (chapters[i].chapter === searchNum) {
+                chapterList.positionViewAtIndex(i, ListView.Beginning)
+                // optional: clear focus after jump
+                searchField.focus = false
+                return
+            }
+        }
+        // optional: show a toast/feedback that chapter was not found
+        console.log("Chapter not found:", searchNum)
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
+        // ----- top bar (back, title, library) -----
         Rectangle {
             Layout.fillWidth: true; height: 56
             color: c.surface_container_low; z: 2
@@ -106,6 +189,7 @@ Item {
             }
         }
 
+        // ----- cover & description area -----
         Rectangle {
             Layout.fillWidth: true
             height: Novel.currentNovel !== null ? 130 : 0
@@ -192,6 +276,7 @@ Item {
             }
         }
 
+        // ----- chapter info bar (count + last read) -----
         Rectangle {
             Layout.fillWidth: true; height: 36
             color: c.surface_container
@@ -235,6 +320,64 @@ Item {
             }
         }
 
+        Rectangle {
+            Layout.fillWidth: true;
+            height: 48
+            color: c.surface_container
+            visible: Novel.currentNovel !== null
+
+            RowLayout {
+                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                spacing: 8
+
+                Button {
+                    text: "Continue"
+                    font.family: detailView.fontBody
+                    font.pixelSize: 12
+                    font.bold: true
+                    contentItem: Text {
+                        text: parent.text
+                        font: parent.font
+                        color: c.on_primary
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: c.primary
+                        radius: 14
+                        opacity: parent.enabled ? 1 : 0.6
+                    }
+                    onClicked: continueReading()
+                }
+
+                Button {
+                    text: "Next Chapter"
+                    font.family: detailView.fontBody
+                    font.pixelSize: 12
+                    font.bold: true
+                    contentItem: Text {
+                        text: parent.text
+                        font: parent.font
+                        color: c.on_primary
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: c.primary
+                        radius: 14
+                        opacity: parent.enabled ? 1 : 0.6
+                    }
+                    onClicked: readNext()
+                }
+            }
+
+            Rectangle {
+                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+                height: 1; color: c.outline_variant; opacity: 0.3
+            }
+        }
+
+        // ----- Chapter list area -----
         Item {
             Layout.fillWidth: true; Layout.fillHeight: true
 
@@ -321,9 +464,9 @@ Item {
                                 color: c.on_surface; elide: Text.ElideRight
                             }
 
-                            // Word count hint if available (omitted if 0)
+                            // Word count hint if available (omitted for brevity)
                             Text {
-                                visible: false  // populated after chapter is fetched — omit for now
+                                visible: false
                                 font.family: detailView.fontBody; font.pixelSize: 10
                                 color: c.on_surface_variant; opacity: 0.5; font.letterSpacing: 0.3
                             }

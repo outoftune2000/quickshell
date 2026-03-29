@@ -333,7 +333,7 @@ def get_episode_links(show_id: str, ep_no: str, mode: str = "sub") -> dict:
     }
 
 
-LATEST_QUERY_HASH = "ADD_YOUR_HASH"
+LATEST_QUERY_HASH = "a24c500a1b765c68ae1d8dd85174931f661c71369c89b92b88b75a725afc471c"
 
 
 def _parse_latest_show(edge: dict) -> dict:
@@ -462,7 +462,7 @@ def latest_shows(
         "shows": [_parse_latest_show(e) for e in edges],
     }
 
-POPULAR_QUERY_HASH = "ADD_YOUR_HASH"
+POPULAR_QUERY_HASH = "60f50b84bb545fa25ee7f7c8c0adbf8f5cea40f7b1ef8501cbbff70e38589489"
 
 
 def _parse_popular_show(rec: dict) -> dict:

@@ -16,34 +16,26 @@ RowLayout {
 
     spacing: 6
 
-    property var visibleItems: {
-        var items = SystemTray.items.values || []
-
-        return items.filter((item) => {
-            if (blacklist.some(name =>
-                item.id.toLowerCase().includes(name.toLowerCase())))
-                return false
-
-            if (hidePassive && item.status === SystemTrayStatus.Passive)
-                return false
-
-            return true
-        })
-    }
-
-    Connections {
-        target: SystemTray.items
-        function onValuesChanged() {
-            trayRoot.visibleItems = trayRoot.visibleItems
-        }
-    }
-
     Repeater {
-        model: trayRoot.visibleItems
+        model: SystemTray.items.values
 
-        Rectangle {
-            Layout.preferredWidth: trayRoot.iconSize + 10
-            Layout.preferredHeight: trayRoot.iconSize + 10
+        delegate: Rectangle {
+            // Filter here instead
+            visible: {
+                let item = modelData
+                if (!item) return false
+                if (trayRoot.blacklist.some(name =>
+                    item.id.toLowerCase().includes(name.toLowerCase())))
+                    return false
+                if (trayRoot.hidePassive && item.status === SystemTrayStatus.Passive)
+                    return false
+                return true
+            }
+            height: visible ? trayRoot.iconSize + 10 : 0
+            width: visible ? trayRoot.iconSize + 10 : 0
+
+            Layout.preferredWidth: visible ? trayRoot.iconSize + 10 : 0
+            Layout.preferredHeight: visible ? trayRoot.iconSize + 10 : 0
 
             radius: 6
             color: itemMouseArea.containsMouse
