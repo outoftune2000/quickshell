@@ -19,6 +19,7 @@ import qs.modules.wallpaper
 import qs.modules.manga
 import qs.modules.novel
 import qs.modules.anime
+import qs.aikira
 
 ShellRoot {
     id: root
@@ -241,6 +242,16 @@ ShellRoot {
             }
         }
 
+        Loader {
+            active: false
+            id: aikiraLoader
+            anchors.centerIn: parent
+            sourceComponent: Aikira {
+                id: aikiraChat
+            }
+            focus: true
+        }
+
         property bool altHeld: false
 
         mask: Region{
@@ -291,6 +302,9 @@ ShellRoot {
             }
             Region{
                 item: animeLoader.item.visible ? animeLoader.item : null
+            }
+            Region {
+                item: aikiraLoader.active ? aikiraLoader : null
             }
         }
     }
@@ -501,6 +515,33 @@ ShellRoot {
         id: closeWindowSwitcherTimer
         interval: 300
         onTriggered: windowSwitcherLoader.active = false
+    }
+
+    IpcHandler {
+        target: "aikiraChat"
+        function changeVisible(): void {
+            if (!aikiraLoader.active) {
+                aikiraLoader.active = true
+                aikiraLoader.item.visible = true
+            } else {
+                aikiraLoader.item.visible = !aikiraLoader.item.visible
+            }
+        }
+    }
+
+    Timer {
+        id: closeAikiraTimer
+        interval: 600
+        onTriggered: aikiraLoader.active = false
+    }
+
+    Connections {
+        target: aikiraLoader.item
+        function onVisibleChanged() {
+            if (aikiraLoader.item && !aikiraLoader.item.visible) {
+                closeAikiraTimer.start()
+            }
+        }
     }
 
 }
