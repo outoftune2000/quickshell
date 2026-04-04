@@ -172,6 +172,63 @@ Item {
                 }
             }
 
+            RowLayout {
+                Layout.fillWidth: true
+                visible: Services.Media.playerCount > 1
+                spacing: 4
+
+                Button {
+                    implicitWidth: 24
+                    implicitHeight: 24
+                    hoverEnabled: true
+                    onClicked: Services.Media.previousPlayer()
+
+                    background: Rectangle {
+                        radius: 4
+                        color: parent.hovered ? ColorsModule.Colors.surface_container_highest : "transparent"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+
+                    contentItem: Text {
+                        text: "‹"
+                        font.pixelSize: 16
+                        color: ColorsModule.Colors.on_surface_variant
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: Services.Media.currentPlayerName
+                    color: ColorsModule.Colors.on_surface_variant
+                    font.pixelSize: 11
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                }
+
+                Button {
+                    implicitWidth: 24
+                    implicitHeight: 24
+                    hoverEnabled: true
+                    onClicked: Services.Media.nextPlayer()
+
+                    background: Rectangle {
+                        radius: 4
+                        color: parent.hovered ? ColorsModule.Colors.surface_container_highest : "transparent"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+
+                    contentItem: Text {
+                        text: "›"
+                        font.pixelSize: 16
+                        color: ColorsModule.Colors.on_surface_variant
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 4
@@ -239,7 +296,7 @@ Item {
                 Layout.preferredHeight: 100
                 radius: 10
                 color: "transparent"
-                visible: true
+                visible: mediaControl.isSpotify
 
                 Behavior on Layout.preferredHeight {
                     NumberAnimation { duration: 200 }
@@ -296,6 +353,7 @@ Item {
         }
     }
 
+    property bool isSpotify: Services.Media.currentPlayerName.toLowerCase().indexOf("spotify") !== -1
     property var lyricsModel: []
     property int _lastPosition: -1
 

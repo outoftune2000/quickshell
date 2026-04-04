@@ -58,6 +58,20 @@ Singleton {
         }
     }
 
+    function nextPlayer() {
+        const players = Mpris.players.values;
+        if (players.length <= 1) return;
+        const idx = players.indexOf(instance.activePlayer);
+        selectPlayer(players[(idx + 1) % players.length]);
+    }
+
+    function previousPlayer() {
+        const players = Mpris.players.values;
+        if (players.length <= 1) return;
+        const idx = players.indexOf(instance.activePlayer);
+        selectPlayer(players[(idx - 1 + players.length) % players.length]);
+    }
+
     function updateActivePlayer() {
         const players = Mpris.players.values;
 
