@@ -3,7 +3,9 @@ import QtQuick.Layouts
 import Quickshell
 import qs.services as Services
 import "../../colors" as ColorsModule
+import "../../components"
 import Qt5Compat.GraphicalEffects
+import Quickshell.Wayland
 
 PanelWindow {
     id: win
@@ -13,134 +15,191 @@ PanelWindow {
     anchors.top: true
     anchors.right: true
 
-    implicitWidth: Services.Notification.popups.length > 0 ? 340 : 0
+    implicitWidth: Services.Notification.popups.length > 0 ? 328 : 0
     implicitHeight: 600
+    exclusionMode: ExclusionMode.Ignore
+    WlrLayershell.layer: WlrLayer.Overlay
 
-    Column {
-        id: stack
+    Popout {
+        id: mainPopout
+        alignment: 1
+        radius: 14
+        color: ColorsModule.Colors.surface_container_high
+
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.margins: 16
-        spacing: 8
 
-        Repeater {
-            model: Services.Notification.popups
+        visible: Services.Notification.popups.length > 0
 
-            delegate: Rectangle {
-                required property var modelData
+        width: 300
+        height: toastColumn.implicitHeight + radius * 2
 
-                radius: 14
-                width: 280
-                height: content.implicitHeight + 18
+        Behavior on height {
+            NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+        }
 
-                color: ColorsModule.Colors.surface_container_high
-                border.color: ColorsModule.Colors.outline_variant
-                border.width: 1
+        layer.effect: DropShadow {
+            horizontalOffset: 0
+            verticalOffset: 3
+            radius: 16
+            samples: 24
+            color: ColorsModule.Colors.shadow
+        }
 
-                opacity: 1
-                scale: 1
+        Column {
+            id: toastColumn
+            width: mainPopout.width - mainPopout.radius * 2
+            spacing: 0
 
-                // shadow
-                layer.enabled: true
-                layer.effect: DropShadow {
-                    horizontalOffset: 0
-                    verticalOffset: 3
-                    radius: 16
-                    samples: 24
-                    color: ColorsModule.Colors.shadow
-                }
+            Repeater {
+                model: Services.Notification.popups
 
-                Behavior on opacity {
-                    NumberAnimation { duration: 120 }
-                }
+                delegate: Item {
+                    required property var modelData
+                    required property int index
 
-                Behavior on scale {
-                    NumberAnimation { duration: 120 }
-                }
+                    width: toastColumn.width
+                    height: notifCol.implicitHeight
 
-                ColumnLayout {
-                    id: content
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 6
+                    Column {
+                        id: notifCol
+                        width: parent.width
+                        spacing: 0
 
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-
+                        // separator above (all except the first notification)
                         Rectangle {
-                            width: 28
-                            height: 28
-                            radius: 7
-                            color: "transparent"
+                            visible: index > 0
+                            width: parent.width
+                            height: visible ? 1 : 0
+                            color: ColorsModule.Colors.outline_variant
+                            opacity: 0.4
+                        }
+
+                        // top spacing
+                        Item {
+                            width: parent.width
+                            height: index > 0 ? 10 : 0
+                        }
+
+                        // timer progress track
+                        Rectangle {
+                            id: timerTrack
+                            width: parent.width
+                            height: 3
+                            radius: 1.5
+                            color: ColorsModule.Colors.outline_variant
                             clip: true
 
-                            Image {
-                                anchors.fill: parent
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                                property var image: modelData.appIcon
+                            Rectangle {
+                                id: timerBar
+                                anchors.left: parent.left
+                                height: parent.height
+                                radius: parent.radius
+                                color: ColorsModule.Colors.primary
+                                width: timerTrack.width
 
-                                source: {
-                                    if (typeof image !== "undefined" && image && image.startsWith("/"))
-                                        return "file://" + image;
+                                Component.onCompleted: {
+                                    const totalDuration = modelData.notification.expireTimeout > 0
+                                        ? modelData.notification.expireTimeout
+                                        : 5000
+                                    const elapsed = Date.now() - modelData.time.getTime()
+                                    const remaining = Math.max(0, totalDuration - elapsed)
+                                    timerAnim.duration = remaining
+                                    timerAnim.from = timerTrack.width * (remaining / totalDuration)
+                                    timerAnim.start()
+                                }
 
-                                    if (typeof image !== "undefined" && image && image.includes("://"))
-                                        return image;
-
-                                    if (typeof appIcon !== "undefined" && appIcon && appIcon.includes("/"))
-                                        return "file://" + appIcon;
-
-                                    if (typeof appIcon !== "undefined" && appIcon)
-                                        return "image://icon/" + appIcon;
-
-                                    return "";
+                                NumberAnimation {
+                                    id: timerAnim
+                                    target: timerBar
+                                    property: "width"
+                                    to: 0
+                                    easing.type: Easing.Linear
                                 }
                             }
                         }
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 3
+                        // spacing between bar and content
+                        Item { width: parent.width; height: 8 }
 
-                            Text {
-                                text: modelData.summary
-                                font.bold: true
-                                font.pixelSize: 13
-                                color: ColorsModule.Colors.on_surface
-                                wrapMode: Text.Wrap
-                                Layout.fillWidth: true
+                        // notification row
+                        RowLayout {
+                            width: parent.width
+                            spacing: 10
+
+                            Rectangle {
+                                width: 28
+                                height: 28
+                                radius: 7
+                                color: "transparent"
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    fillMode: Image.PreserveAspectFit
+                                    smooth: true
+
+                                    source: {
+                                        const icon = modelData.appIcon;
+                                        if (icon) {
+                                            if (icon.startsWith("/"))
+                                                return "file://" + icon;
+                                            if (icon.includes("://"))
+                                                return icon;
+                                            return "image://icon/" + icon;
+                                        }
+                                        return "image://icon/dialog-information";
+                                    }
+
+                                    onStatusChanged: {
+                                        if (status === Image.Error)
+                                            source = "image://icon/dialog-information";
+                                    }
+                                }
                             }
 
-                            Text {
-                                visible: modelData.body.length > 0
-                                text: modelData.body
-                                font.pixelSize: 12
-                                color: ColorsModule.Colors.on_surface_variant
-                                wrapMode: Text.Wrap
+                            ColumnLayout {
                                 Layout.fillWidth: true
+                                spacing: 3
+
+                                Text {
+                                    text: modelData.summary
+                                    font.bold: true
+                                    font.pixelSize: 13
+                                    color: ColorsModule.Colors.on_surface
+                                    wrapMode: Text.Wrap
+                                    Layout.fillWidth: true
+                                }
+
+                                Text {
+                                    visible: modelData.body.length > 0
+                                    text: modelData.body
+                                    font.pixelSize: 12
+                                    color: ColorsModule.Colors.on_surface_variant
+                                    wrapMode: Text.Wrap
+                                    Layout.fillWidth: true
+                                }
                             }
                         }
+
+                        // bottom spacing
+                        Item { width: parent.width; height: 10 }
                     }
-                }
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
 
-                    onPressed: parent.scale = 0.97
-                    onReleased: parent.scale = 1.0
-
-                    onClicked: {
-                        if (modelData.actions.length > 0) {
-                            let defaultAction = modelData.actions.find(action => action.id === "default");
-                            if (defaultAction) {
-                                defaultAction.invoke();
-                            } else {
-                                modelData.actions[0].invoke();
+                        onClicked: {
+                            if (modelData.actions.length > 0) {
+                                let defaultAction = modelData.actions.find(a => a.id === "default");
+                                if (defaultAction)
+                                    defaultAction.invoke();
+                                else
+                                    modelData.actions[0].invoke();
                             }
+                            modelData.popup = false;
                         }
-                        modelData.popup = false;
                     }
                 }
             }

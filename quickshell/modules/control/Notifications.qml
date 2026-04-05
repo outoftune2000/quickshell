@@ -176,9 +176,22 @@ Item {
                                 fillMode: Image.PreserveAspectFit
                                 smooth: true
 
-                                source: modelData.appIcon !== ""
-                                    ? Quickshell.icon(modelData.appIcon)
-                                    : "image://theme/dialog-information"
+                                source: {
+                                    const icon = modelData.appIcon;
+                                    if (icon) {
+                                        if (icon.startsWith("/"))
+                                            return "file://" + icon;
+                                        if (icon.includes("://"))
+                                            return icon;
+                                        return "image://icon/" + icon;
+                                    }
+                                    return "image://icon/dialog-information";
+                                }
+
+                                onStatusChanged: {
+                                    if (status === Image.Error)
+                                        source = "image://icon/dialog-information";
+                                }
                             }
                         }
 

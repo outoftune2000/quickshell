@@ -12,7 +12,6 @@ Item {
     id: controlCenter
     property bool opened: false
     focus: true
-
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.bottom: parent.bottom
