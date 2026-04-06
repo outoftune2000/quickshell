@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
 """
 ani-cli Python API
 Exposes ani-cli scraping logic as HTTP endpoints.
 Run: pip install flask requests && python ani_api.py
 """
 
+import json
 import re
 import subprocess
 import threading
@@ -25,6 +25,13 @@ ALLANIME_API = f"https://api.{ALLANIME_BASE}"
 HEADERS = {
     "User-Agent": AGENT,
     "Referer": ALLANIME_REFR,
+}
+
+# Headers specifically for GraphQL POST requests (need Content-Type)
+GQL_HEADERS = {
+    "User-Agent": AGENT,
+    "Referer": ALLANIME_REFR,
+    "Content-Type": "application/json",
 }
 
 HEX_MAP = {
@@ -58,19 +65,26 @@ def decode_provider_url(encoded: str) -> str:
     return result
 
 
-def gql(variables: dict, query: str) -> str:
-    """Fire a GraphQL request against the allanime API and return raw text."""
-    resp = requests.get(
+def gql_post(variables: dict, query: str) -> str:
+    """Fire a GraphQL POST request against the allanime API and return raw text.
+
+    The upstream site now requires POST with a JSON body (matching the bash
+    script's ``curl -X POST --data '...'`` calls).  The old GET-with-params
+    approach no longer works after the Cloudflare / rules change.
+    """
+    payload = json.dumps({
+        "variables": variables,
+        "query": query,
+    })
+    resp = requests.post(
         f"{ALLANIME_API}/api",
-        params={
-            "variables": str(variables).replace("'", '"').replace("True", "true").replace("False", "false"),
-            "query": query,
-        },
-        headers=HEADERS,
+        data=payload,
+        headers=GQL_HEADERS,
         timeout=15,
     )
     resp.raise_for_status()
     return resp.text
+
 
 SEARCH_GQL = (
     "query( $search: SearchInput $limit: Int $page: Int "
@@ -85,8 +99,6 @@ SEARCH_GQL = (
 
 def search_anime(query: str, mode: str = "sub") -> list[dict]:
     """Return list of show dicts including thumbnail, score, and episode counts."""
-    import json
-
     variables = {
         "search": {
             "allowAdult": False,
@@ -98,14 +110,15 @@ def search_anime(query: str, mode: str = "sub") -> list[dict]:
         "translationType": mode,
         "countryOrigin": "ALL",
     }
-    params = {
-        "variables": json.dumps(variables),
+
+    payload = json.dumps({
+        "variables": variables,
         "query": SEARCH_GQL,
-    }
-    resp = requests.get(
+    })
+    resp = requests.post(
         f"{ALLANIME_API}/api",
-        params=params,
-        headers=HEADERS,
+        data=payload,
+        headers=GQL_HEADERS,
         timeout=15,
     )
     resp.raise_for_status()
@@ -144,15 +157,14 @@ EPISODES_LIST_GQL = (
 
 def episodes_list(show_id: str, mode: str = "sub") -> list[str]:
     """Return sorted list of available episode strings for a show."""
-    import json
-    params = {
-        "variables": json.dumps({"showId": show_id}),
+    payload = json.dumps({
+        "variables": {"showId": show_id},
         "query": EPISODES_LIST_GQL,
-    }
-    resp = requests.get(
+    })
+    resp = requests.post(
         f"{ALLANIME_API}/api",
-        params=params,
-        headers=HEADERS,
+        data=payload,
+        headers=GQL_HEADERS,
         timeout=15,
     )
     resp.raise_for_status()
@@ -267,19 +279,18 @@ def get_episode_links(show_id: str, ep_no: str, mode: str = "sub") -> dict:
     Full equivalent of get_episode_url() in the shell script.
     Returns {providers: {name: [links]}, all_links: [...]}
     """
-    import json
-    params = {
-        "variables": json.dumps({
+    payload = json.dumps({
+        "variables": {
             "showId": show_id,
             "translationType": mode,
             "episodeString": ep_no,
-        }),
+        },
         "query": EPISODE_EMBED_GQL,
-    }
-    resp = requests.get(
+    })
+    resp = requests.post(
         f"{ALLANIME_API}/api",
-        params=params,
-        headers=HEADERS,
+        data=payload,
+        headers=GQL_HEADERS,
         timeout=15,
     )
     resp.raise_for_status()
@@ -415,8 +426,6 @@ def latest_shows(
         "shows": [ ... ]
     }
     """
-    import json
-
     variables = {
         "search": search or {},
         "limit": limit,
@@ -425,6 +434,7 @@ def latest_shows(
         "countryOrigin": country,
     }
 
+    # Persisted queries still use GET with extensions param (hash-based, no query body)
     params = {
         "variables": json.dumps(variables),
         "extensions": json.dumps({
@@ -535,8 +545,6 @@ def popular_shows(
         "shows": [ ... ]
     }
     """
-    import json
-
     variables = {
         "type": "anime",
         "size": size,
@@ -546,6 +554,7 @@ def popular_shows(
         "allowUnknown": allow_unknown,
     }
 
+    # Persisted queries still use GET with extensions param (hash-based, no query body)
     params = {
         "variables": json.dumps(variables),
         "extensions": json.dumps({

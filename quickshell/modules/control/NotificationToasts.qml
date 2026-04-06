@@ -24,7 +24,7 @@ PanelWindow {
         id: mainPopout
         alignment: 1
         radius: 14
-        color: ColorsModule.Colors.surface_container_high
+        color: ColorsModule.Colors.surface_container
 
         anchors.top: parent.top
         anchors.right: parent.right
