@@ -8,7 +8,7 @@ import "../../colors" as ColorsModule
 
 Item {
     readonly property bool adapterPresent: Services.Bluetooth.defaultAdapter !== null
-    readonly property bool enabled: Services.Bluetooth.defaultAdapter?.enabled ?? false
+    readonly property bool bluetoothEnabled: Services.Bluetooth.defaultAdapter?.enabled ?? false
     readonly property var devices: Services.Bluetooth.devices
     readonly property var activeDevice: Services.Bluetooth.activeDevice
 
@@ -24,7 +24,7 @@ Item {
                 text: ""
                 font.family: "Material Design Icons"
                 font.pixelSize: 24
-                color: enabled
+                color: bluetoothEnabled
                     ? ColorsModule.Colors.primary
                     : ColorsModule.Colors.on_surface_variant
             }
@@ -42,7 +42,7 @@ Item {
                 Layout.preferredHeight: 26
                 radius: height / 2
 
-                color: enabled
+                color: bluetoothEnabled
                     ? ColorsModule.Colors.primary
                     : ColorsModule.Colors.surface_container_high
 
@@ -51,7 +51,7 @@ Item {
                     height: 20
                     radius: 10
                     y: 3
-                    x: enabled ? parent.width - width - 3 : 3
+                    x: bluetoothEnabled ? parent.width - width - 3 : 3
                     color: ColorsModule.Colors.on_surface
 
                     Behavior on x {
@@ -106,7 +106,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
 
                     onClicked: {
-                        if (enabled)
+                        if (bluetoothEnabled)
                             Services.Bluetooth.defaultAdapter.discovering = true
                     }
                 }
@@ -134,6 +134,27 @@ Item {
                     color: mouse.containsMouse
                         ? ColorsModule.Colors.surface_container_high
                         : ColorsModule.Colors.surface
+
+                    MouseArea {
+                        id: mouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+
+                        onClicked: {
+                            if (!bluetoothEnabled)
+                                return
+
+                            if (modelData.connected) {
+                                modelData.disconnect()
+                            } else {
+                                if (!modelData.paired)
+                                    modelData.pair()
+
+                                modelData.connect()
+                            }
+                        }
+                    }
 
                     RowLayout {
                         anchors.fill: parent
@@ -169,34 +190,49 @@ Item {
                                 color: ColorsModule.Colors.on_surface_variant
                             }
                         }
-                    }
 
-                    MouseArea {
-                        id: mouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
+                        Rectangle {
+                            visible: modelData.paired
+                            Layout.preferredWidth: 30
+                            Layout.preferredHeight: 30
+                            radius: 6
+                            z: 1
+                            color: unpairMouseArea.containsMouse
+                                ? ColorsModule.Colors.error
+                                : "transparent"
 
-                        onClicked: {
-                            if (!enabled)
-                                return
+                            Text {
+                                anchors.centerIn: parent
+                                text: "󰚃"
+                                font.family: "Material Design Icons"
+                                font.pixelSize: 16
+                                color: unpairMouseArea.containsMouse
+                                    ? ColorsModule.Colors.on_error
+                                    : ColorsModule.Colors.on_surface_variant
+                            }
 
-                            if (modelData.connected) {
-                                modelData.disconnect()
-                            } else {
-                                if (!modelData.paired)
-                                    modelData.pair()
+                            MouseArea {
+                                id: unpairMouseArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
 
-                                modelData.connect()
+                                onClicked: mouse => {
+                                    mouse.accepted = true
+                                    if (modelData.connected)
+                                        modelData.disconnect()
+                                    modelData.forget()
+                                }
                             }
                         }
                     }
+
                 }
 
                 Text {
                     anchors.centerIn: parent
                     visible: devices.length === 0
-                    text: enabled
+                    text: bluetoothEnabled
                         ? "No devices found"
                         : "Bluetooth disabled"
                     color: ColorsModule.Colors.on_surface_variant
