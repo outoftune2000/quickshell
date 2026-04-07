@@ -256,6 +256,10 @@ ShellRoot {
             id: clipboardManager
         }
 
+        PowerMenu {
+            id: powerMenu
+        }
+
         property bool altHeld: false
 
         mask: Region{
@@ -312,6 +316,9 @@ ShellRoot {
             }
             Region {
                 item: clipboardManager.visible ? clipboardManager : null
+            }
+            Region {
+                item: powerMenu.visible ? powerMenu : null
             }
         }
     }
@@ -561,6 +568,17 @@ ShellRoot {
                 clipboardManager.open()
             } else {
                 clipboardManager.close()
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "powerMenu"
+        function toggle(): void {
+            if (!powerMenu.visible) {
+                powerMenu.open()
+            } else {
+                powerMenu.close()
             }
         }
     }

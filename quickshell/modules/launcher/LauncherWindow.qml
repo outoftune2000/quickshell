@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import "../../colors" as ColorsModule
@@ -31,12 +30,15 @@ Item {
         if (isOpen) return
         isOpen = true
         searchField.text = ""
-        searchField.forceActiveFocus()
-        // Reset panel to start position before animating in
-        panel.opacity = 0
-        panel.scale  = 0.88
-        panel.y      = panel._centerY + 28
+
+        backdrop.opacity   = 0
+        searchPill.opacity = 0
+        searchPill.y       = searchPill._targetY - 28
+        gridContainer.opacity = 0
+        hintText.opacity   = 0
+
         openAnim.restart()
+        searchField.forceActiveFocus()
     }
 
     function close() {
@@ -45,438 +47,440 @@ Item {
     }
 
     anchors.fill: parent
+    enabled: isOpen
+
+    // ── Backdrop ─────────────────────────────────────────────────────────────
 
     Rectangle {
-        id: scrim
+        id: backdrop
         anchors.fill: parent
-        color: ColorsModule.Colors.scrim
         opacity: 0
 
-        enabled: scrim.opacity > 0.01
-
-        Behavior on opacity {
-            NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+        gradient: Gradient {
+            orientation: Gradient.Vertical
+            GradientStop { position: 0.0;  color: Qt.rgba(0, 0, 0, 0.88) }
+            GradientStop { position: 0.42; color: Qt.rgba(0, 0, 0, 0.74) }
+            GradientStop { position: 1.0;  color: Qt.rgba(0, 0, 0, 0.88) }
         }
 
         MouseArea {
             anchors.fill: parent
-            enabled: parent.enabled
             onClicked: root.close()
         }
+
+        Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
     }
 
-    Rectangle {
-        id: panel
+    // ── Search pill ───────────────────────────────────────────────────────────
 
-        width: 640
-        height: 600
+    Item {
+        id: searchPill
+        anchors.horizontalCenter: parent.horizontalCenter
 
-        property real _centerX: (root.width  - width)  / 2
-        property real _centerY: (root.height - height) / 2
+        property real _targetY: 100
+        y: _targetY
 
-        x: _centerX
-        y: _centerY
-
-        radius: 24
-
-        color: ColorsModule.Colors.surface_container
-        border.color: ColorsModule.Colors.outline_variant
-        border.width: 1
-
+        width: 520
+        height: 56
         opacity: 0
-        scale:   0.88
-        enabled: opacity > 0.01
 
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            shadowEnabled: true
-            shadowColor: ColorsModule.Colors.shadow
-            shadowBlur: 0.7
-            shadowVerticalOffset: 16
-            shadowHorizontalOffset: 0
-            shadowOpacity: 0.65
-        }
-
-        ParallelAnimation {
-            id: openAnim
-
-            NumberAnimation {
-                target: scrim; property: "opacity"
-                to: 0.55; duration: 260; easing.type: Easing.OutCubic
-            }
-            NumberAnimation {
-                target: panel; property: "opacity"
-                to: 1; duration: 220; easing.type: Easing.OutCubic
-            }
-            SequentialAnimation {
-                NumberAnimation {
-                    target: panel; property: "scale"
-                    to: 1.02; duration: 200; easing.type: Easing.OutCubic
-                }
-                NumberAnimation {
-                    target: panel; property: "scale"
-                    to: 1.0; duration: 100; easing.type: Easing.InOutQuad
-                }
-            }
-            NumberAnimation {
-                target: panel; property: "y"
-                to: panel._centerY; duration: 280; easing.type: Easing.OutCubic
-            }
-        }
-
-        ParallelAnimation {
-            id: closeAnim
-
-            NumberAnimation {
-                target: scrim; property: "opacity"
-                to: 0; duration: 180; easing.type: Easing.InCubic
-            }
-            NumberAnimation {
-                target: panel; property: "opacity"
-                to: 0; duration: 160; easing.type: Easing.InCubic
-            }
-            NumberAnimation {
-                target: panel; property: "scale"
-                to: 0.90; duration: 180; easing.type: Easing.InCubic
-            }
-            NumberAnimation {
-                target: panel; property: "y"
-                to: panel._centerY + 20; duration: 180; easing.type: Easing.InCubic
-            }
-
-            onFinished: root.isOpen = false
-        }
-
-        ColumnLayout {
+        Rectangle {
             anchors.fill: parent
-            spacing: 0
+            radius: 28
 
-            Item {
-                Layout.fillWidth: true
-                height: 72
+            color: Qt.rgba(1, 1, 1, 0.07)
+            border.width: 1.5
+            border.color: searchField.activeFocus
+                ? Qt.rgba(
+                    Qt.color(ColorsModule.Colors.primary).r,
+                    Qt.color(ColorsModule.Colors.primary).g,
+                    Qt.color(ColorsModule.Colors.primary).b,
+                    0.5
+                  )
+                : Qt.rgba(1, 1, 1, 0.12)
 
-                Rectangle {
-                    anchors.fill: parent
-                    color: ColorsModule.Colors.surface_container_high
-                    radius: 24
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: 24
-                        color: parent.color
-                    }
+            // Top-edge shine
+            Rectangle {
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: parent.height * 0.5
+                radius: parent.radius
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.055) }
+                    GradientStop { position: 1.0; color: "transparent" }
                 }
+            }
 
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 20
-                    anchors.rightMargin: 20
-                    spacing: 14
+            Behavior on border.color { ColorAnimation { duration: 200 } }
 
-                    Text {
-                        text: "⌕"
-                        font.pixelSize: 22
-                        color: searchField.activeFocus
-                            ? ColorsModule.Colors.primary
-                            : ColorsModule.Colors.on_surface_variant
-                        Layout.alignment: Qt.AlignVCenter
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                    }
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 22
+                anchors.rightMargin: 16
+                spacing: 14
 
-                    TextField {
-                        id: searchField
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-
-                        placeholderText: "Search applications…"
-                        font.pixelSize: 16
-                        font.family: "Noto Sans"
-                        color: ColorsModule.Colors.on_surface
-                        placeholderTextColor: ColorsModule.Colors.on_surface_variant
-
-                        background: Item {}
-
-                        onTextChanged: root.searchText = text
-
-                        Keys.onEscapePressed: root.close()
-                        Keys.onReturnPressed: {
-                            if (root.filteredApps.length > 0)
-                                launchApp(root.filteredApps[gridView.currentIndex >= 0 ? gridView.currentIndex : 0])
-                        }
-                        Keys.onDownPressed: gridView.forceActiveFocus()
-                    }
-
-                    Rectangle {
-                        visible: searchField.text.length > 0
-                        width: 26; height: 26
-                        radius: 13
-                        color: clearHover.containsMouse
-                            ? ColorsModule.Colors.surface_container_highest
-                            : ColorsModule.Colors.surface_container_high
-                        Layout.alignment: Qt.AlignVCenter
-                        Behavior on color { ColorAnimation { duration: 100 } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "✕"
-                            font.pixelSize: 11
-                            color: ColorsModule.Colors.on_surface_variant
-                        }
-
-                        MouseArea {
-                            id: clearHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: searchField.text = ""
-                            cursorShape: Qt.PointingHandCursor
-                        }
-                    }
-                }
-
-                Rectangle {
-                    anchors.bottom: parent.bottom
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    height: 1
+                Text {
+                    text: "󰍉"
+                    font.family: "Material Design Icons"
+                    font.pixelSize: 20
                     color: searchField.activeFocus
                         ? ColorsModule.Colors.primary
-                        : ColorsModule.Colors.outline_variant
-                    opacity: searchField.activeFocus ? 0.9 : 0.5
-                    Behavior on color   { ColorAnimation  { duration: 180 } }
-                    Behavior on opacity { NumberAnimation { duration: 180 } }
+                        : Qt.rgba(1, 1, 1, 0.4)
+                    Layout.alignment: Qt.AlignVCenter
+                    Behavior on color { ColorAnimation { duration: 180 } }
                 }
-            }
 
-            Item {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                TextField {
+                    id: searchField
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
 
-                GridView {
-                    id: gridView
-                    anchors.fill: parent
-                    anchors.margins: 16
-                    anchors.bottomMargin: 8
+                    placeholderText: "SEARCH APPLICATIONS"
+                    font.pixelSize: 13
+                    font.family: "Noto Sans"
+                    font.letterSpacing: 1.5
+                    color: "white"
+                    placeholderTextColor: Qt.rgba(1, 1, 1, 0.28)
 
-                    cellWidth: 118
-                    cellHeight: 112
-                    clip: true
+                    background: Item {}
+                    leftPadding: 0
+                    rightPadding: 0
 
-                    model: root.filteredApps
+                    onTextChanged: root.searchText = text
 
-                    ScrollBar.vertical: ScrollBar {
-                        policy: ScrollBar.AsNeeded
-                        contentItem: Rectangle {
-                            implicitWidth: 4
-                            radius: 2
-                            color: ColorsModule.Colors.outline
-                            opacity: 0.6
-                        }
-                        background: Item {}
-                    }
-
-                    Keys.onReturnPressed: {
-                        if (currentIndex >= 0 && currentIndex < root.filteredApps.length)
-                            launchApp(root.filteredApps[currentIndex])
-                    }
                     Keys.onEscapePressed: root.close()
-                    Keys.onUpPressed: {
-                        if (currentIndex < gridView.columns)
-                            searchField.forceActiveFocus()
-                        else
-                            moveCurrentIndexUp()
+                    Keys.onReturnPressed: {
+                        if (root.filteredApps.length > 0)
+                            launchApp(root.filteredApps[gridView.currentIndex >= 0 ? gridView.currentIndex : 0])
                     }
+                    Keys.onDownPressed: gridView.forceActiveFocus()
+                }
 
-                    delegate: Item {
-                        id: delegateRoot
-                        width: gridView.cellWidth
-                        height: gridView.cellHeight
+                Rectangle {
+                    visible: searchField.text.length > 0
+                    width: 26; height: 26; radius: 13
+                    color: clearArea.containsMouse
+                        ? Qt.rgba(1, 1, 1, 0.15)
+                        : Qt.rgba(1, 1, 1, 0.08)
+                    Layout.alignment: Qt.AlignVCenter
+                    Behavior on color { ColorAnimation { duration: 120 } }
 
-                        property var app: root.filteredApps[index]
-                        property bool isHovered: false
-                        property bool isFocused: GridView.isCurrentItem
-
-                        opacity: 0
-                        scale: 0.85
-                        Component.onCompleted: entranceAnim.start()
-
-                        ParallelAnimation {
-                            id: entranceAnim
-                            running: false
-                            NumberAnimation {
-                                target: delegateRoot; property: "opacity"
-                                from: 0; to: 1; duration: 200
-                                easing.type: Easing.OutCubic
-                            }
-                            NumberAnimation {
-                                target: delegateRoot; property: "scale"
-                                from: 0.82; to: 1; duration: 220
-                                easing.type: Easing.OutBack
-                            }
-                        }
-
-                        Rectangle {
-                            id: appCard
-                            anchors.fill: parent
-                            anchors.margins: 5
-                            radius: 16
-
-                            color: isHovered || isFocused
-                                ? ColorsModule.Colors.surface_container_highest
-                                : "transparent"
-                            border.color: isFocused ? ColorsModule.Colors.primary : "transparent"
-                            border.width: isFocused ? 1.5 : 0
-
-                            Behavior on color        { ColorAnimation { duration: 120 } }
-                            Behavior on border.color { ColorAnimation { duration: 120 } }
-
-                            Image {
-                                id: appIcon
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.top: parent.top
-                                anchors.topMargin: 14
-                                width: 42; height: 42
-
-                                sourceSize.width: 64
-                                sourceSize.height: 64
-
-                                source: Services.AppRegistry.iconForAppMeta(app)
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                                mipmap: false
-                                antialiasing: true
-
-                                scale: isHovered ? 1.12 : 1.0
-                                Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutBack } }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: 10
-                                    color: ColorsModule.Colors.primary_container
-                                    visible: parent.status === Image.Error || parent.status === Image.Null
-
-                                    Text {
-                                        anchors.centerIn: parent
-                                        text: app && app.name ? app.name.charAt(0).toUpperCase() : "?"
-                                        font.pixelSize: 18
-                                        font.weight: Font.Medium
-                                        renderType: Text.NativeRendering
-                                        color: ColorsModule.Colors.on_primary_container
-                                    }
-                                }
-                            }
-
-                            Text {
-                                anchors.bottom: parent.bottom
-                                anchors.bottomMargin: 10
-                                anchors.left: parent.left; anchors.right: parent.right
-                                anchors.leftMargin: 5;     anchors.rightMargin: 5
-
-                                text: app ? app.name : ""
-                                font.pixelSize: 11
-                                font.family: "Noto Sans"
-                                renderType: Text.NativeRendering
-                                color: isFocused
-                                    ? ColorsModule.Colors.primary
-                                    : ColorsModule.Colors.on_surface
-                                horizontalAlignment: Text.AlignHCenter
-                                elide: Text.ElideRight
-                                maximumLineCount: 2
-                                wrapMode: Text.WordWrap
-                                Behavior on color { ColorAnimation { duration: 120 } }
-                            }
-
-                            Rectangle {
-                                id: pressOverlay
-                                anchors.fill: parent
-                                radius: appCard.radius
-                                color: ColorsModule.Colors.primary
-                                opacity: 0
-                                NumberAnimation on opacity {
-                                    id: pressAnim; running: false
-                                    from: 0.18; to: 0; duration: 350
-                                    easing.type: Easing.OutCubic
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onEntered: { isHovered = true; gridView.currentIndex = index }
-                                onExited:  isHovered = false
-                                onPressed: pressAnim.restart()
-                                onClicked: launchApp(root.filteredApps[index])
-                            }
-                        }
-                    }
-
-                    Column {
+                    Text {
                         anchors.centerIn: parent
-                        visible: root.filteredApps.length === 0
-                        spacing: 8
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: "⊘"; font.pixelSize: 32
-                            color: ColorsModule.Colors.on_surface_variant; opacity: 0.5
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: "No apps found"; font.pixelSize: 14
-                            font.family: "Noto Sans"
-                            color: ColorsModule.Colors.on_surface_variant
-                        }
+                        text: "󰅖"
+                        font.family: "Material Design Icons"
+                        font.pixelSize: 14
+                        color: Qt.rgba(1, 1, 1, 0.65)
                     }
-                }
-            }
 
-            Item {
-                Layout.fillWidth: true
-                height: 42
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: ColorsModule.Colors.surface_container_low
-                    radius: 24
-                    Rectangle {
-                        anchors.top: parent.top
-                        anchors.left: parent.left; anchors.right: parent.right
-                        height: 24
-                        color: parent.color
-                    }
-                }
-
-                Rectangle {
-                    anchors.top: parent.top
-                    anchors.left: parent.left; anchors.right: parent.right
-                    height: 1
-                    color: ColorsModule.Colors.outline_variant; opacity: 0.4
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 20; anchors.rightMargin: 16
-                    spacing: 6
-
-                    Rectangle {
-                        width: 6; height: 6; radius: 3
-                        color: ColorsModule.Colors.primary; opacity: 0.7
-                    }
-                    Text {
-                        text: root.filteredApps.length + " app" + (root.filteredApps.length !== 1 ? "s" : "")
-                        font.pixelSize: 11; font.family: "Noto Sans"
-                        color: ColorsModule.Colors.on_surface_variant
-                    }
-                    Item { Layout.fillWidth: true }
-                    Text {
-                        text: "↵ launch  ·  ↑↓←→ navigate  ·  Esc close"
-                        font.pixelSize: 11; font.family: "Noto Sans"
-                        color: ColorsModule.Colors.on_surface_variant; opacity: 0.6
+                    MouseArea {
+                        id: clearArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: searchField.text = ""
                     }
                 }
             }
         }
     }
+
+    // ── App grid ──────────────────────────────────────────────────────────────
+
+    Item {
+        id: gridContainer
+        anchors.top: searchPill.bottom
+        anchors.topMargin: 32
+        anchors.bottom: hintText.top
+        anchors.bottomMargin: 24
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: 1200
+        opacity: 0
+
+        GridView {
+            id: gridView
+            anchors.fill: parent
+            anchors.rightMargin: 4
+
+            cellWidth:  130
+            cellHeight: 138
+            clip: true
+
+            model: root.filteredApps
+
+            Keys.onReturnPressed: {
+                if (currentIndex >= 0 && currentIndex < root.filteredApps.length)
+                    launchApp(root.filteredApps[currentIndex])
+            }
+            Keys.onEscapePressed: root.close()
+            Keys.onUpPressed: {
+                if (currentIndex < gridView.columns)
+                    searchField.forceActiveFocus()
+                else
+                    moveCurrentIndexUp()
+            }
+
+            delegate: Item {
+                id: delegateRoot
+                width: gridView.cellWidth
+                height: gridView.cellHeight
+
+                property var app: root.filteredApps[index]
+                property bool isHovered: false
+                property bool isFocused: GridView.isCurrentItem
+                property bool isPressed: false
+
+                opacity: 0
+                Component.onCompleted: {
+                    scale = 0.80
+                    entranceAnim.start()
+                }
+
+                ParallelAnimation {
+                    id: entranceAnim
+                    running: false
+                    NumberAnimation {
+                        target: delegateRoot; property: "opacity"
+                        from: 0; to: 1; duration: 260
+                        easing.type: Easing.OutCubic
+                    }
+                    NumberAnimation {
+                        target: delegateRoot; property: "scale"
+                        from: 0.80; to: 1; duration: 300
+                        easing.type: Easing.OutBack; easing.overshoot: 0.5
+                    }
+                }
+
+                // Inner content centered in cell
+                Item {
+                    anchors.centerIn: parent
+                    width: 88
+                    height: 116
+
+                    // Outer glow ring — visible on hover/focus
+                    Rectangle {
+                        anchors.centerIn: iconFrame
+                        width: iconFrame.width + 20
+                        height: iconFrame.height + 20
+                        radius: 24
+                        color: "transparent"
+                        border.width: 1.5
+                        border.color: Qt.rgba(
+                            Qt.color(ColorsModule.Colors.primary).r,
+                            Qt.color(ColorsModule.Colors.primary).g,
+                            Qt.color(ColorsModule.Colors.primary).b,
+                            delegateRoot.isHovered || delegateRoot.isFocused ? 0.45 : 0
+                        )
+                        scale: delegateRoot.isHovered || delegateRoot.isFocused ? 1.0 : 0.75
+
+                        Behavior on border.color { ColorAnimation  { duration: 200 } }
+                        Behavior on scale        { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                    }
+
+                    // Icon frame
+                    Rectangle {
+                        id: iconFrame
+                        anchors.top: parent.top
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: 72
+                        height: 72
+                        radius: 20
+
+                        color: Qt.rgba(1, 1, 1,
+                            delegateRoot.isPressed ? 0.20
+                            : delegateRoot.isHovered || delegateRoot.isFocused ? 0.13
+                            : 0.07)
+                        border.width: 1
+                        border.color: Qt.rgba(1, 1, 1,
+                            delegateRoot.isHovered || delegateRoot.isFocused ? 0.22 : 0.09)
+
+                        scale: delegateRoot.isPressed ? 0.86
+                            : delegateRoot.isHovered  ? 1.10 : 1.0
+
+                        // Top-edge shine
+                        Rectangle {
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: parent.height * 0.5
+                            radius: parent.radius
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.08) }
+                                GradientStop { position: 1.0; color: "transparent" }
+                            }
+                        }
+
+                        Image {
+                            anchors.centerIn: parent
+                            width: 44; height: 44
+                            sourceSize.width: 88; sourceSize.height: 88
+                            source: Services.AppRegistry.iconForAppMeta(delegateRoot.app)
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true; antialiasing: true
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 10
+                                color: ColorsModule.Colors.primary_container
+                                visible: parent.status === Image.Error || parent.status === Image.Null
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: delegateRoot.app && delegateRoot.app.name
+                                        ? delegateRoot.app.name.charAt(0).toUpperCase() : "?"
+                                    font.pixelSize: 20
+                                    font.weight: Font.Medium
+                                    color: ColorsModule.Colors.on_primary_container
+                                }
+                            }
+                        }
+
+                        Behavior on color        { ColorAnimation  { duration: 150 } }
+                        Behavior on border.color { ColorAnimation  { duration: 150 } }
+                        Behavior on scale        { NumberAnimation { duration: 160; easing.type: Easing.OutBack; easing.overshoot: 0.5 } }
+                    }
+
+                    // Label — PowerMenu style: all-caps, spaced, dim until hovered
+                    Text {
+                        anchors.top: iconFrame.bottom
+                        anchors.topMargin: 12
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width + 24
+                        text: delegateRoot.app ? delegateRoot.app.name.toUpperCase() : ""
+                        font.pixelSize: 9
+                        font.weight: Font.Medium
+                        font.letterSpacing: 1.5
+                        color: Qt.rgba(1, 1, 1,
+                            delegateRoot.isHovered || delegateRoot.isFocused ? 0.88 : 0.38)
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
+                        Behavior on color { ColorAnimation { duration: 160 } }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: { delegateRoot.isHovered = true; gridView.currentIndex = index }
+                        onExited:  { delegateRoot.isHovered = false; delegateRoot.isPressed = false }
+                        onPressed: delegateRoot.isPressed = true
+                        onReleased: delegateRoot.isPressed = false
+                        onClicked: launchApp(root.filteredApps[index])
+                    }
+                }
+            }
+
+            // ── Empty state ───────────────────────────────────────────────────
+
+            Column {
+                anchors.centerIn: parent
+                visible: root.filteredApps.length === 0
+                spacing: 14
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "󰍉"
+                    font.family: "Material Design Icons"
+                    font.pixelSize: 34
+                    color: Qt.rgba(1, 1, 1, 0.18)
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "NO RESULTS"
+                    font.pixelSize: 10
+                    font.letterSpacing: 3.5
+                    font.weight: Font.Medium
+                    color: Qt.rgba(1, 1, 1, 0.22)
+                }
+            }
+        }
+    }
+
+    // ── Hint ─────────────────────────────────────────────────────────────────
+
+    Text {
+        id: hintText
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 52
+        text: "ESC TO CANCEL"
+        font.pixelSize: 10
+        font.letterSpacing: 2.5
+        font.weight: Font.Light
+        color: Qt.rgba(1, 1, 1, 0.2)
+        opacity: 0
+        Behavior on opacity { NumberAnimation { duration: 400 } }
+    }
+
+    // ── Open animation ────────────────────────────────────────────────────────
+
+    ParallelAnimation {
+        id: openAnim
+
+        NumberAnimation {
+            target: backdrop; property: "opacity"
+            to: 1; duration: 240; easing.type: Easing.OutCubic
+        }
+
+        SequentialAnimation {
+            PauseAnimation { duration: 50 }
+            ParallelAnimation {
+                NumberAnimation {
+                    target: searchPill; property: "opacity"
+                    to: 1; duration: 300; easing.type: Easing.OutCubic
+                }
+                NumberAnimation {
+                    target: searchPill; property: "y"
+                    to: searchPill._targetY; duration: 380; easing.type: Easing.OutCubic
+                }
+            }
+        }
+
+        SequentialAnimation {
+            PauseAnimation { duration: 110 }
+            NumberAnimation {
+                target: gridContainer; property: "opacity"
+                to: 1; duration: 300; easing.type: Easing.OutCubic
+            }
+        }
+
+        SequentialAnimation {
+            PauseAnimation { duration: 440 }
+            NumberAnimation {
+                target: hintText; property: "opacity"
+                to: 1; duration: 260; easing.type: Easing.OutCubic
+            }
+        }
+    }
+
+    // ── Close animation ───────────────────────────────────────────────────────
+
+    ParallelAnimation {
+        id: closeAnim
+
+        NumberAnimation {
+            target: backdrop; property: "opacity"
+            to: 0; duration: 200; easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: searchPill; property: "opacity"
+            to: 0; duration: 180; easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: gridContainer; property: "opacity"
+            to: 0; duration: 180; easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: hintText; property: "opacity"
+            to: 0; duration: 160; easing.type: Easing.InCubic
+        }
+
+        onFinished: root.isOpen = false
+    }
+
+    // ── Launch ────────────────────────────────────────────────────────────────
 
     function launchApp(app) {
         if (!app || !app.exec) return
