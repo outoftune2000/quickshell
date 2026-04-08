@@ -12,6 +12,7 @@
 
         property bool wifiEnabled: true
         readonly property bool scanning: rescanProc.running
+        readonly property bool connecting: connectProc.running
 
         property string lastNetworkAttempt: ""
         property string lastErrorMessage: ""
@@ -78,6 +79,10 @@
             } else if (connection.type === "ethernet") {
                 ethConnectProc.exec(["nmcli", "connection", "up", connection.uuid]);
             }
+        }
+
+        function forget(name: string): void {
+            forgetProc.exec(["nmcli", "connection", "delete", name])
         }
 
         function disconnect():void {
@@ -172,6 +177,11 @@
                 }
                 updateConnections();
             }
+        }
+
+        Process {
+            id: forgetProc
+            onExited: updateConnections()
         }
 
         Process {

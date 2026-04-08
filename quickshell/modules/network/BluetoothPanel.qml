@@ -11,6 +11,7 @@ Item {
     readonly property bool bluetoothEnabled: Services.Bluetooth.defaultAdapter?.enabled ?? false
     readonly property var devices: Services.Bluetooth.devices
     readonly property var activeDevice: Services.Bluetooth.activeDevice
+    property bool scanning: false
 
     ColumnLayout {
         anchors.fill: parent
@@ -83,19 +84,30 @@ Item {
                     : ColorsModule.Colors.surface_container_high
 
                 Text {
+                    id: btScanIcon
                     anchors.centerIn: parent
                     text: "󰑐"
                     font.family: "Material Design Icons"
                     font.pixelSize: 20
-                    color: ColorsModule.Colors.on_surface
+                    color: scanning
+                        ? ColorsModule.Colors.primary
+                        : ColorsModule.Colors.on_surface
 
-                    rotation: Services.Bluetooth.defaultAdapter?.discovering ? 360 : 0
+                    RotationAnimator on rotation {
+                        from: 0; to: 360
+                        duration: 900
+                        loops: Animation.Infinite
+                        running: scanning
+                    }
+                }
 
-                    Behavior on rotation {
-                        NumberAnimation {
-                            duration: 1000
-                            loops: Animation.Infinite
-                        }
+                Timer {
+                    id: scanStopTimer
+                    interval: 10000
+                    onTriggered: {
+                        scanning = false
+                        if (Services.Bluetooth.defaultAdapter)
+                            Services.Bluetooth.defaultAdapter.discovering = false
                     }
                 }
 
@@ -106,8 +118,11 @@ Item {
                     cursorShape: Qt.PointingHandCursor
 
                     onClicked: {
-                        if (bluetoothEnabled)
+                        if (bluetoothEnabled) {
                             Services.Bluetooth.defaultAdapter.discovering = true
+                            scanning = true
+                            scanStopTimer.restart()
+                        }
                     }
                 }
             }

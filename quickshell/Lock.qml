@@ -181,7 +181,7 @@ ShellRoot {
                 Image {
                     id: bgWallpaper
                     anchors.fill: parent
-                    source: screenRoot.staticWallpaperPath
+                    source: '/home/igris/.cache/current_wallpaper'
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     visible: false
@@ -374,7 +374,7 @@ ShellRoot {
                             Image {
                                 id: avatarImg
                                 anchors.fill: parent
-                                source: screenRoot.faceIconPath !== "" ? screenRoot.faceIconPath : ""
+                                source: '/home/igris/.cache/current_avatar'
                                 fillMode: Image.PreserveAspectCrop
                                 visible: false
                                 cache: false

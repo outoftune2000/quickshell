@@ -260,6 +260,10 @@ ShellRoot {
             id: powerMenu
         }
 
+        AvatarPicker {
+            id: avatarPicker
+        }
+
         property bool altHeld: false
 
         mask: Region{
@@ -319,6 +323,9 @@ ShellRoot {
             }
             Region {
                 item: powerMenu.visible ? powerMenu : null
+            }
+            Region {
+                item: avatarPicker
             }
         }
     }
@@ -579,6 +586,17 @@ ShellRoot {
                 powerMenu.open()
             } else {
                 powerMenu.close()
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "avatarPicker"
+        function toggle(): void {
+            if (!avatarPicker.opened) {
+                avatarPicker.open()
+            } else {
+                avatarPicker.close()
             }
         }
     }

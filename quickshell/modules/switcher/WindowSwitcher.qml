@@ -357,35 +357,43 @@ PanelWindow {
                     Row {
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
-                        spacing: 12
+                        spacing: 10
 
                         Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 8; height: 8; radius: 4
+                            width: 6; height: 6; radius: 3
                             color: ColorsModule.Colors.primary
+                            opacity: 0.9
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: {
                                 var wc = winRepeater.count
                                 var gc = exposeArea.cardList.length
-                                return wc + " window" + (wc !== 1 ? "s" : "") +
-                                    (gc > 1 ? " · " + gc + " workspaces" : "")
+                                if (wc === 0) return "No windows"
+                                return wc + (wc === 1 ? " window" : " windows") +
+                                    (gc > 1 ? "  ·  " + gc + " workspaces" : "")
                             }
-                            font.pixelSize: 14
+                            font.pixelSize: 13
                             font.weight: Font.Medium
+                            font.letterSpacing: 0.2
                             color: ColorsModule.Colors.on_surface_variant
-                            opacity: 0.9
+                            opacity: 0.75
                         }
                     }
 
-                    Text {
+                    Row {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "ESC to close"
-                        font.pixelSize: 12
-                        color: ColorsModule.Colors.on_surface_variant
-                        opacity: 0.6
+                        spacing: 16
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "↵ focus  ·  esc close"
+                            font.pixelSize: 11
+                            color: ColorsModule.Colors.on_surface_variant
+                            opacity: 0.4
+                        }
                     }
                 }
 
@@ -456,82 +464,6 @@ PanelWindow {
                         return root.computeCardRegions(rawWindowList, exposeArea.width, exposeArea.height)
                     }
 
-                    Repeater {
-                        id: cardRepeater
-                        model: exposeArea.cardList
-
-                        delegate: Item {
-                            id: cardDelegate
-                            x: modelData.x
-                            y: modelData.y
-                            width:  modelData.width
-                            height: modelData.height
-
-                            property bool isDragTarget: dragState.active
-                                && dragState.hoverCardIndex === index
-                                && modelData.workspaceId !== dragState.sourceWorkspace
-
-                            Behavior on isDragTarget { }
-
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: 16
-                                color: cardDelegate.isDragTarget
-                                    ? Qt.rgba(
-                                        Qt.lighter(ColorsModule.Colors.primary, 1.2).r,
-                                        Qt.lighter(ColorsModule.Colors.primary, 1.2).g,
-                                        Qt.lighter(ColorsModule.Colors.primary, 1.2).b,
-                                        0.18)
-                                    : ColorsModule.Colors.surface_container
-                                opacity: cardDelegate.isDragTarget ? 1.0 : 0.55
-                                border.width: cardDelegate.isDragTarget ? 2 : 1
-                                border.color: cardDelegate.isDragTarget
-                                    ? ColorsModule.Colors.primary
-                                    : Qt.rgba(1, 1, 1, 0.07)
-
-                                Behavior on color       { ColorAnimation { duration: 120 } }
-                                Behavior on border.color { ColorAnimation { duration: 120 } }
-                                Behavior on border.width { NumberAnimation { duration: 80 } }
-                                Behavior on opacity      { NumberAnimation { duration: 120 } }
-
-                                Rectangle {
-                                    anchors.fill: parent
-                                    anchors.margins: -3
-                                    radius: 19
-                                    color: "transparent"
-                                    border.width: cardDelegate.isDragTarget ? 2 : 0
-                                    border.color: ColorsModule.Colors.primary
-                                    opacity: 0.45
-                                    visible: cardDelegate.isDragTarget
-                                }
-                            }
-
-                            // Workspace label badge
-                            Rectangle {
-                                anchors.top: parent.top
-                                anchors.left: parent.left
-                                anchors.margins: 10
-                                width: wsLabel.implicitWidth + 16
-                                height: 22
-                                radius: 11
-                                color: cardDelegate.isDragTarget
-                                    ? ColorsModule.Colors.primary
-                                    : ColorsModule.Colors.primary
-                                opacity: cardDelegate.isDragTarget ? 1.0 : 0.75
-
-                                Text {
-                                    id: wsLabel
-                                    anchors.centerIn: parent
-                                    text: cardDelegate.isDragTarget
-                                        ? "Drop here → WS " + modelData.workspaceId
-                                        : "WS " + modelData.workspaceId
-                                    font.pixelSize: 11
-                                    font.weight: Font.Medium
-                                    color: ColorsModule.Colors.on_primary
-                                }
-                            }
-                        }
-                    }
 
                     Repeater {
                         model: exposeArea.windowList
@@ -586,7 +518,7 @@ PanelWindow {
                                 thumbH:     modelData.height
                                 clientInfo: hWin.lastIpcObject
 
-                                targetX:        0   // relative to wrapper
+                                targetX:        0
                                 targetY:        0
                                 targetZ:        0
                                 targetRotation: modelData.rotation || 0
@@ -602,6 +534,30 @@ PanelWindow {
                                     shadowBlur:            0.5
                                     shadowHorizontalOffset: 2
                                     shadowVerticalOffset:   2
+                                }
+                            }
+
+                            // Workspace number badge — top-right of thumbnail
+                            Rectangle {
+                                z: 200
+                                anchors.top:   parent.top
+                                anchors.right: parent.right
+                                anchors.topMargin:   6
+                                anchors.rightMargin: 6
+                                width:  wsNumText.implicitWidth + 12
+                                height: 20
+                                radius: 10
+                                color:  Qt.rgba(0, 0, 0, 0.55)
+                                border.width: 1
+                                border.color: Qt.rgba(1, 1, 1, 0.15)
+
+                                Text {
+                                    id: wsNumText
+                                    anchors.centerIn: parent
+                                    text: modelData.workspaceId
+                                    font.pixelSize: 10
+                                    font.weight: Font.SemiBold
+                                    color: Qt.rgba(1, 1, 1, 0.85)
                                 }
                             }
 
@@ -725,33 +681,15 @@ PanelWindow {
 
                 Item {
                     width: parent.width
-                    height: searchBox.implicitHeight
+                    height: 60
 
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.topMargin:    -12
-                        anchors.bottomMargin: -12
-                        color:   ColorsModule.Colors.surface_container
-                        opacity: 0.7
-                        radius:  16
+                    SearchBox {
+                        id: searchBox
+                        anchors.centerIn: parent
+                        width: Math.min(parent.width * 0.55, 520)
 
-                        Rectangle {
-                            anchors.top:   parent.top
-                            anchors.left:  parent.left
-                            anchors.right: parent.right
-                            height: 1
-                            color:   ColorsModule.Colors.primary
-                            opacity: 0.3
-                        }
-
-                        SearchBox {
-                            id: searchBox
-                            anchors.centerIn: parent
-                            width: parent.width * 0.6
-
-                            onTextChanged: function(text) {
-                                exposeArea.searchText = text
-                            }
+                        onTextChanged: function(text) {
+                            exposeArea.searchText = text
                         }
                     }
                 }

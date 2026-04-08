@@ -70,18 +70,20 @@ Item {
                     : ColorsModule.Colors.surface_container_high
 
                 Text {
+                    id: wifiScanIcon
                     anchors.centerIn: parent
                     text: "󰑐"
                     font.family: "Material Design Icons"
                     font.pixelSize: 20
-                    color: ColorsModule.Colors.on_surface
+                    color: Services.Network.scanning
+                        ? ColorsModule.Colors.primary
+                        : ColorsModule.Colors.on_surface
 
-                    rotation: Services.Network.scanning ? 360 : 0
-                    Behavior on rotation {
-                        NumberAnimation {
-                            duration: 1000
-                            loops: Animation.Infinite
-                        }
+                    RotationAnimator on rotation {
+                        from: 0; to: 360
+                        duration: 900
+                        loops: Animation.Infinite
+                        running: Services.Network.scanning
                     }
                 }
 
@@ -229,45 +231,20 @@ Item {
                         })
 
                         delegate: Rectangle {
+                            id: netItem
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 56
+                            Layout.preferredHeight: isConnecting ? 64 : 56
                             radius: 8
+
+                            property bool isConnecting: Services.Network.connecting
+                                && modelData.name === Services.Network.lastNetworkAttempt
 
                             color: networkMouseArea.containsMouse
                                 ? ColorsModule.Colors.surface_container_highest
                                 : "transparent"
 
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.margins: 10
-                                spacing: 12
-
-                                Text {
-                                    font.family: "Material Design Icons"
-                                    font.pixelSize: 22
-
-                                    text: {
-                                        if (modelData.active) return "󰄬";
-
-                                        const s = modelData.strength;
-                                        if (s >= 75) return "󰤨";
-                                        if (s >= 50) return "󰤥";
-                                        if (s >= 25) return "󰤢";
-                                        return "󰤟";
-                                    }
-
-                                    color: modelData.active
-                                        ? ColorsModule.Colors.primary
-                                        : ColorsModule.Colors.on_surface_variant
-                                }
-
-
-                                Text {
-                                    text: modelData.name
-                                    Layout.fillWidth: true
-                                    elide: Text.ElideRight
-                                    color: ColorsModule.Colors.on_surface
-                                }
+                            Behavior on Layout.preferredHeight {
+                                NumberAnimation { duration: 150 }
                             }
 
                             MouseArea {
@@ -276,7 +253,7 @@ Item {
                                 hoverEnabled: true
 
                                 onClicked: {
-                                    if (!modelData.active) {
+                                    if (!modelData.active && !isConnecting) {
                                         passwordDialog.targetNetwork = modelData
                                         if (modelData.isSecure && !modelData.saved)
                                             passwordDialog.visible = true
@@ -285,6 +262,95 @@ Item {
                                     }
                                 }
                             }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 12
+
+                                Item {
+                                    width: 28
+                                    height: 28
+
+                                    Text {
+                                        id: netIcon
+                                        anchors.centerIn: parent
+                                        font.family: "Material Design Icons"
+                                        font.pixelSize: 22
+                                        text: {
+                                            if (isConnecting) return "󰑐"
+                                            if (modelData.active) return "󰄬"
+                                            const s = modelData.strength
+                                            if (s >= 75) return "󰤨"
+                                            if (s >= 50) return "󰤥"
+                                            if (s >= 25) return "󰤢"
+                                            return "󰤟"
+                                        }
+                                        color: (isConnecting || modelData.active)
+                                            ? ColorsModule.Colors.primary
+                                            : ColorsModule.Colors.on_surface_variant
+
+                                        RotationAnimator on rotation {
+                                            from: 0; to: 360
+                                            duration: 900
+                                            loops: Animation.Infinite
+                                            running: isConnecting
+                                        }
+                                    }
+                                }
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+
+                                    Text {
+                                        text: modelData.name
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                        color: ColorsModule.Colors.on_surface
+                                    }
+
+                                    Text {
+                                        visible: isConnecting
+                                        text: "Connecting..."
+                                        font.pixelSize: 11
+                                        color: ColorsModule.Colors.primary
+                                    }
+                                }
+
+                                Rectangle {
+                                    visible: modelData.saved && !isConnecting
+                                    Layout.preferredWidth: 30
+                                    Layout.preferredHeight: 30
+                                    radius: 6
+                                    z: 1
+                                    color: forgetMouseArea.containsMouse
+                                        ? ColorsModule.Colors.error_container
+                                        : "transparent"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "󰺝"
+                                        font.family: "Material Design Icons"
+                                        font.pixelSize: 16
+                                        color: forgetMouseArea.containsMouse
+                                            ? ColorsModule.Colors.on_error_container
+                                            : ColorsModule.Colors.on_surface_variant
+                                    }
+
+                                    MouseArea {
+                                        id: forgetMouseArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: mouse => {
+                                            mouse.accepted = true
+                                            Services.Network.forget(modelData.name)
+                                        }
+                                    }
+                                }
+                            }
+
                         }
                     }
                 }

@@ -6,6 +6,7 @@ import Quickshell.Widgets
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Qt5Compat.GraphicalEffects
+import "../../colors" as ColorsModule
 
 Item {
     id: thumbContainer
@@ -240,10 +241,20 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: thumbContainer.hovered ? "transparent": "#33000000"
-                    border.width : thumbContainer.hovered ? 3 : 1
-                    border.color : thumbContainer.hovered ? "#ff0088cc" : "#cc444444"
+                    color: thumbContainer.hovered
+                        ? Qt.rgba(
+                            Qt.color(ColorsModule.Colors.primary).r,
+                            Qt.color(ColorsModule.Colors.primary).g,
+                            Qt.color(ColorsModule.Colors.primary).b, 0.08)
+                        : "transparent"
+                    border.width: thumbContainer.hovered ? 2 : 1
+                    border.color: thumbContainer.hovered
+                        ? ColorsModule.Colors.primary
+                        : Qt.rgba(1, 1, 1, 0.12)
                     radius: 16
+                    Behavior on border.width { NumberAnimation { duration: 120 } }
+                    Behavior on color        { ColorAnimation  { duration: 150 } }
+                    Behavior on border.color { ColorAnimation  { duration: 150 } }
                 }
             }
         }
@@ -251,27 +262,37 @@ Item {
         Rectangle {
             id: badge
             z: 100
-            width: Math.min(titleText.implicitWidth + 24, thumbContainer.thumbW * 0.75)
-            height: titleText.implicitHeight + 12
+            width: Math.min(titleText.implicitWidth + 24, thumbContainer.thumbW * 0.8)
+            height: 26
 
             x: (card.width - width) / 2
-            y: card.height - height - (card.height * 0.08)
+            y: card.height - height - 10
 
-            radius: 12
-            color: thumbContainer.hovered ? "#FF000000" : "#CC000000"
-            border.width : 1
-            border.color : "#ff464646"
+            radius: 13
+            color: Qt.rgba(0, 0, 0, thumbContainer.hovered ? 0.72 : 0.55)
+            border.width: 1
+            border.color: thumbContainer.hovered
+                ? Qt.rgba(
+                    Qt.color(ColorsModule.Colors.primary).r,
+                    Qt.color(ColorsModule.Colors.primary).g,
+                    Qt.color(ColorsModule.Colors.primary).b, 0.6)
+                : Qt.rgba(1, 1, 1, 0.10)
+
+            Behavior on color        { ColorAnimation  { duration: 150 } }
+            Behavior on border.color { ColorAnimation  { duration: 150 } }
 
             Text {
                 id: titleText
                 anchors.centerIn: parent
                 width: parent.width - 16
                 text: hWin.title
-                color: "white"
-                font.pixelSize: thumbContainer.hovered ? 13 : 12
+                color: thumbContainer.hovered ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                font.pixelSize: 12
+                font.weight: Font.Medium
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
+                Behavior on color { ColorAnimation { duration: 150 } }
             }
         }
     }
