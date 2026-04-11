@@ -17,7 +17,7 @@ Rectangle {
 
     readonly property string srcDir: "file://" + Quickshell.env("HOME") + "/Pictures/wallpapers"
 
-    readonly property string setwallCommand: "/home/igris/.local/bin/setwall '%1'"
+    readonly property string setwallCommand: Quickshell.env("HOME") + "/.local/bin/setwall '%1'"
 
     readonly property int itemWidth: 300
     readonly property int itemHeight: 420
