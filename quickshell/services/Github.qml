@@ -9,7 +9,7 @@ pragma ComponentBehavior: Bound
 Singleton {
     id: root
     property int contribution_number
-    property string author: "dhrruvsharma" // Fixed: quotes were missing
+    property string author: "outoftune2000" // Fixed: quotes were missing
     property var contributions: []
 
     Timer {
