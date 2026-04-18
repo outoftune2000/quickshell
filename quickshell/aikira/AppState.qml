@@ -57,19 +57,18 @@ Singleton {
     }
 
     // ── Character actions ──────────────────────────────────────────────────
-    function selectCharacter(char) {
-        root.activeCharacter = char
+    function selectCharacter(characterData) {
+        root.activeCharacter = characterData
         root.activeConversation = null
         root.messages = []
         root.streamBuffer = ""
         root.view = "chat"
-        Api.loadConversations(char.id, function(err, data) {
+        Api.loadConversations(characterData.id, function(err, data) {
             if (err) return
             root.conversations = data
             if (data.length > 0) selectConversation(data[0])
         })
     }
-
     function selectConversation(conv) {
         root.activeConversation = conv
         root.messages = []
