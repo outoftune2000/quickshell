@@ -54,12 +54,15 @@ HEX_MAP = {
 
 def decode_provider_url(encoded: str) -> str:
     """
-    Decode the hex-encoded provider URL produced by the shell script's
-    `provider_init` sed chain. Each pair of hex chars maps to a character
-    via HEX_MAP; anything not in the map is passed through as-is.
+    Updated decoder that handles both old hex URLs and new unencrypted ones.
     """
-    pairs = [encoded[i:i+2] for i in range(0, len(encoded), 2)]
-    result = "".join(HEX_MAP.get(p, p) for p in pairs)
+    if encoded.startswith("--"):
+        encoded = encoded[2:]
+        pairs = [encoded[i:i+2] for i in range(0, len(encoded), 2)]
+        result = "".join(HEX_MAP.get(p, p) for p in pairs)
+    else:
+        result = encoded
+        
     # allanime clock path fix
     result = result.replace("/clock", "/clock.json")
     return result
@@ -298,9 +301,8 @@ def get_episode_links(show_id: str, ep_no: str, mode: str = "sub") -> dict:
 
     raw_norm = raw.replace("\\u002F", "/").replace("\\|", "")
 
-    source_re = re.compile(
-        r'sourceUrl":"--([^"]+)"[^}]*sourceName":"([^"]+)"'
-    )
+    # FIX: Removed the strict '--' requirement from the regex
+    source_re = re.compile(r'sourceUrl":"([^"]+)"[^}]*sourceName":"([^"]+)"')
     sources = {}
     for m in source_re.finditer(raw_norm):
         encoded_url, name = m.group(1), m.group(2)
@@ -308,8 +310,9 @@ def get_episode_links(show_id: str, ep_no: str, mode: str = "sub") -> dict:
         sources[name] = provider_path
 
     if not sources:
+        # Added a debug print so we can see what AllAnime changed it to if it fails again!
+        print("\n[DEBUG] ALLANIME API CHANGED. RAW RESPONSE:\n", raw_norm[:1500], "\n")
         return {"error": "No sources found for this episode", "raw_snippet": raw_norm[:500]}
-
     provider_results = {}
 
     def fetch_provider(name, path):
